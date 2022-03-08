@@ -123,3 +123,25 @@ master %>%
   st_write('C:/Users/barguzin/Documents/Github/church_cover/data/church_mos_200.geojson', 
            delete_dsn=T)
 
+#######################################################
+#-----------------------------------------------------#
+#######################################################
+
+all = st_read('C:/Users/barguzin/Documents/Github/church_cover/data/church_mos_temples_all.geojson')
+top200 = st_read('C:/Users/barguzin/Documents/Github/church_cover/data/church_mos_200.geojson')
+
+#merged <- union(all, top200)
+
+diff <- setdiff(all$temples_id, top200$temples_id)
+
+all = all %>% 
+  #filter(temples_id %in% top200$temples_id) %>% 
+  mutate(prog_200 = case_when(temples_id %in% top200$temples_id ~ 1, 
+                              TRUE ~ 0))
+
+# check if this is done correctly
+sum(all$prog_200)==193
+
+# save and overwrite 
+st_write(all, 'C:/Users/barguzin/Documents/Github/church_cover/data/church_mos_temples_all.geojson', 
+         delete_dsn = T)
