@@ -96,8 +96,30 @@ church_points %>%
 churches_complete <- st_read('C:/Users/barguzin/Downloads/temples_of_russia41.kml')
 
 # generate unqiue id 
-churches_complete <- churches_complete %>% 
+churches_complete %>% 
+  rowid_to_column("geo_id") %>% 
+  mutate(temples_id = str_match(Description, "ID\\=(\\d+)")[,2]) %>%
+  select(-Description) %>% 
+  mutate(prog_200=1) %>%
+  st_write('C:/Users/barguzin/Documents/Github/church_cover/data/church_mos_temples_all.geojson', 
+           delete_dsn=TRUE)
+
+# read kml in directory 
+path = 'C:/Users/barguzin/YandexDisk/200'
+
+filenames <- list.files(path, pattern="*.kml",full.names=TRUE)
+ldf <- lapply(filenames, st_read)
+
+master = bind_rows(ldf)
+
+master = master %>% 
+  mutate(temples_id = stringr::str_match(Description, "ID=(\\d+)")[,2])
+
+
+master %>%
   rowid_to_column("geo_id") %>% 
   select(-Description) %>% 
-  st_write('C:/Users/barguzin/Documents/Github/church_cover/data/church_mos_temples_all.geojson')
+  mutate(prog_200 = 1) %>%
+  st_write('C:/Users/barguzin/Documents/Github/church_cover/data/church_mos_200.geojson', 
+           delete_dsn=T)
 
