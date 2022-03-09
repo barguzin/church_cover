@@ -2,7 +2,7 @@ library(osmdata)
 library(tidyverse)
 library(sf)
 library(leaflet)
-library(data.table)
+#library(data.table)
 
 setwd("D:/gits/church_cover/")
 
@@ -32,19 +32,22 @@ leaflet() %>%
     data=all_churches[1,]
   )
 
-x <- opq(bbox = buff$buff_geom[1]) %>% 
-  add_osm_feature(key='amenity', value='place_of_worship') %>% 
+x <- opq(bbox = buff$buff_geom[1411]) %>% 
+  add_osm_feature(key='building') %>% 
   osmdata_sf()
 
 # unname so that it plots fine in leaflet
 x <- unname_osmdata_sf(x)
 
+plot(x$osm_polygons)
+
 
 leaflet() %>%
   addTiles() %>%
-  addPolygons(data = x$osm_multipolygons) %>%
-  addMarkers(data = st_centroid(buff$buff_geom[1])) # for some reason there are inconsistencies in coordinates 
-
+  addPolygons(data = x$osm_polygons) %>%
+  addMarkers(data = st_centroid(buff$buff_geom[1411])) %>% # for some reason there are inconsistencies in coordinates 
+  addMarkers(data = x$osm_points)
+  
 poly = x$osm_multipolygons
 
 poly %>% 
@@ -60,8 +63,6 @@ poly %>%
 # 2. select multipolygon which intesects with a centroid of a buffer 
 # 3. save feature to list 
 
-mylist <- c()
-
 for (row in 1:nrow(buff)) {
   
   tryCatch({
@@ -73,10 +74,24 @@ for (row in 1:nrow(buff)) {
     geom_centr = st_centroid(geom)
     
     buildings <- opq(bbox = geom) %>% 
-      add_osm_feature(key='amenity', value='place_of_worship') %>% 
+      add_osm_feature(key='building') %>% 
       osmdata_sf()
     
-    buildings_poly = buildings$osm_multipolygons
+    cat("# of points: ", dim(buildings$osm_points, '\n'))
+    cat("# of polygons: ", dim(buildings$osm_polygons, '\n'))
+    cat("# of multipolygons: ", dim(buildings$osm_multipolygons, '\n'))
+    
+    # ------------------------------------
+    # things to add in the future 
+    # 1. the if-else statement below 
+    # 2. check if the st_contains is empty, use nearest to locate the nearest poly
+    
+    if (!is.null(x$osm_multipolygons)) {
+      cat('multi')
+      buildings_poly = buildings$osm_multipolygons
+    } else {
+      buildings_poly = buildings$osm_polygons
+    }
     
     subset_poly = buildings_poly %>% 
       filter(st_contains(., geom_centr, sparse=FALSE)[,1])
@@ -85,11 +100,15 @@ for (row in 1:nrow(buff)) {
       select(osm_id, building, denomination) %>% 
       st_write('data/subset_poly.geojson', append=T)
     
-    # sleep for 3 seconds
-    Sys.sleep(2)
+    # sleep for n seconds
+    Sys.sleep(1)
     
   }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
   
 }
 
+
+# 
+poly_file = st_read('data/subset_poly.geojson')
+print(dim(poly_file))
 
