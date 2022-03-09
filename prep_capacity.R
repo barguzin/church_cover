@@ -2,6 +2,7 @@ library(osmdata)
 library(tidyverse)
 library(sf)
 library(leaflet)
+library(data.table)
 
 setwd("D:/gits/church_cover/")
 
@@ -59,26 +60,35 @@ poly %>%
 # 2. select multipolygon which intesects with a centroid of a buffer 
 # 3. save feature to list 
 
-poly_list = list()
+mylist <- c()
 
 for (row in 1:nrow(buff)) {
   
-  geom = buff[row, 'buff_geom']
-  geom_centr = st_centroid(geom)
-  
-  buildings <- opq(bbox = geom) %>% 
-    add_osm_feature(key='amenity', value='place_of_worship') %>% 
-    osmdata_sf()
-  
-  buildings_poly = buildings$osm_multipolygons
-  
-  subset_poly = buildings_poly %>% 
-    filter(st_contains(., geom_centr, sparse=FALSE)[,1])
-  
-  poly_list[[i]] = subset_poly
-  
-  # sleep for 3 seconds
-  Sys.sleep(1)
+  tryCatch({
+    
+    print('checking >>> working: ')
+    print(row)
+    
+    geom = buff[row, 'buff_geom']
+    geom_centr = st_centroid(geom)
+    
+    buildings <- opq(bbox = geom) %>% 
+      add_osm_feature(key='amenity', value='place_of_worship') %>% 
+      osmdata_sf()
+    
+    buildings_poly = buildings$osm_multipolygons
+    
+    subset_poly = buildings_poly %>% 
+      filter(st_contains(., geom_centr, sparse=FALSE)[,1])
+    
+    subset_poly %>% 
+      select(osm_id, building, denomination) %>% 
+      st_write('data/subset_poly.geojson', append=T)
+    
+    # sleep for 3 seconds
+    Sys.sleep(2)
+    
+  }, error=function(e){cat("ERROR :",conditionMessage(e), "\n")})
   
 }
 
