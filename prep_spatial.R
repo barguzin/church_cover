@@ -98,8 +98,12 @@ leaflet() %>%
 
 # distance between centr and grid 
 # yields matrix where rows (i) are demand points, and columns (j) are potential sites 
-dist = st_distance(uvao_centr, grid_for_sites) 
-#write.table(dist, file='data/dist.txt', row.names=FALSE, col.names=FALSE)
+dist = st_distance(grid_for_sites, uvao_centr) 
+# the matrix is too large, make it smaller by roudning to ones before writing 
+y = function(x) round(x,0)
+dist[] <- vapply(dist, y, numeric(1))
+
+write.table(dist, file='data/dist.txt', row.names=FALSE, col.names=FALSE)
 
 # also save as pairwise distance 
 dist = drop_units(dist)
@@ -107,3 +111,26 @@ dist = drop_units(dist)
 # also save binary table with 1km buffer 
 binar = ifelse(dist<=1000, 1, 0)
 write.table(binar, file='data/binar.txt', row.names=FALSE, col.names=FALSE)
+
+
+
+###########################################
+#-----------------------------------------#
+#           prep data for Python          #
+#-----------------------------------------#
+###########################################
+# demand points
+uvao_centr %>% 
+  st_drop_geometry() %>% 
+  rowid_to_column("geo_id") %>%
+  mutate(geo_id = geo_id - 1) %>%
+  select(geo_id, flat_cnt, -index) %>%
+  write_csv('data/demand.csv')
+
+# facilities points 
+grid_for_sites %>% 
+  st_drop_geometry() %>% 
+  select(-geo_id) %>%
+  rowid_to_column("geo_id") %>% 
+  mutate(geo_id = geo_id - 1) %>%
+  write_csv('data/facility.csv')
