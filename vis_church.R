@@ -5,15 +5,18 @@ library(lubridate)
 library(RColorBrewer)
 library(leaflet)
 
-setwd("D:/gits/church_cover/")
+#setwd("D:/gits/church_cover/")
+setwd("C:/Users/barguzin/Documents/Github/church_cover/")
 
-okrug = st_read('C:/Users/noibar/YandexDisk/mosmonitor/geo_data/RU-MOW/data/boundary-polygon.shp')
+#okrug = st_read('C:/Users/noibar/YandexDisk/mosmonitor/geo_data/RU-MOW/data/boundary-polygon.shp')
+okrug = st_read('C:/Users/barguzin/YandexDisk/mosmonitor/geo_data/RU-MOW/data/boundary-polygon.shp')
 plot(st_geometry(okrug))
 
 ao = okrug %>% filter(ADMIN_LVL==5)
 
 # read prepped 
-prepped = st_read('D:/gits/church_data_prep/prepped_data.shp')
+#prepped = st_read('D:/gits/church_data_prep/prepped_data.shp')
+prepped = st_read('C:/Users/barguzin/Documents/Github/church_data_prep/prepped_data.shp')
 
 # read all temples (from temples.ru)
 geo = st_read("data/church_mos_temples_all.geojson")
@@ -61,8 +64,20 @@ uvao_jj$prog_200 = as_factor(uvao_jj$prog_200)
 # only keep active 
 uvao_jj = uvao_jj %>% filter(status!="non_preserve")
 # only keep where name does not have 'дерев' - those are temporary wooden buildings 
+uvao_jj = uvao_jj %>% filter(!str_detect(Name, 'дерев')) 
 
-ggplot(uvao_jj) + geom_bar(aes(x=type_build))
+# save to file 
+st_write(uvao_jj, 'data/uvao_churches.geojson', delete_dsn = T)
+st_write(uvao, 'data/uvao_adm.geojson', delete_dsn = T)
+
+# read building centroids and subset by UVAO 
+centr = st_read('C:/Users/barguzin/YandexDisk/mosmonitor/geo_data/unom_mos_centr.shp', options = "ENCODING=UTF-8")
+
+uvao_centr = st_filter(centr, uvao)
+uvao_centr = uvao_centr %>% filter(clas=='1:жилые')
+
+# only keep жилые (residential)
+st_write(uvao_centr, 'data/uvao_centr.geojson', delete_dsn = T)
 
 # this is good for 3 or more colors 
 #myColors <- brewer.pal(2, "Spectral")
